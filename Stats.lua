@@ -8,6 +8,9 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- TRACK MONSTER COUNTS
 local monsterCounts = {}
+local lastFloor = nil
+local lastRoom = nil
+local seenMonstersInRoom = {}
 
 -- 1. DESTROY OLD UI (Clean up)
 if CoreGui:FindFirstChild("OverlayUI") then
@@ -25,7 +28,7 @@ gui.Parent = CoreGui
 -- 3. MAIN CONTAINER (bigger)
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.new(0, 300, 0, 350) -- bigger
+frame.Size = UDim2.new(0, 300, 0, 350)
 frame.Position = UDim2.new(0, 10, 0.25, 0)
 frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 frame.BackgroundTransparency = 0.2
@@ -104,7 +107,7 @@ roomLabel.ZIndex = 11
 roomLabel.Parent = frame
 
 local monsterLabels = {}
-for i = 1, 8 do -- allow more monsters
+for i = 1, 8 do
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(1, 0, 0, 30)
     l.BackgroundTransparency = 1
@@ -117,7 +120,6 @@ for i = 1, 8 do -- allow more monsters
     table.insert(monsterLabels, l)
 end
 
--- MONSTERS TO COLOR PURPLE
 local purpleMonsters = {
     BassieMonster = true,
     AstroMonster = true,
@@ -127,7 +129,6 @@ local purpleMonsters = {
     SproutMonster = true,
 }
 
--- 6. UPDATE LOGIC
 local function update()
     -- FLOOR
     local floorText = "Floor: ???"
@@ -141,6 +142,13 @@ local function update()
     end)
     floorLabel.Text = floorText
 
+    -- Reset counts if floor changed
+    if lastFloor ~= floorText then
+        lastFloor = floorText
+        monsterCounts = {}
+        seenMonstersInRoom = {}
+    end
+
     -- ROOM & MONSTERS
     local roomName = "Room: Not Found"
     for _, ml in pairs(monsterLabels) do ml.Text = "" end
@@ -151,16 +159,24 @@ local function update()
         if roomModel then
             roomName = "Room: " .. roomModel.Name
 
+            -- reset per room if room changed
+            if lastRoom ~= roomModel.Name then
+                lastRoom = roomModel.Name
+                seenMonstersInRoom = {}
+            end
+
             local monstersFolder = roomModel:FindFirstChild("Monsters")
             if monstersFolder then
                 local enemies = monstersFolder:GetChildren()
                 if #enemies > 0 then
                     for i, enemy in ipairs(enemies) do
                         if monsterLabels[i] then
-                            -- count monster appearances
-                            monsterCounts[enemy.Name] = (monsterCounts[enemy.Name] or 0) + 1
+                            -- only increment if first time seen in this room
+                            if not seenMonstersInRoom[enemy.Name] then
+                                monsterCounts[enemy.Name] = (monsterCounts[enemy.Name] or 0) + 1
+                                seenMonstersInRoom[enemy.Name] = true
+                            end
                             local count = monsterCounts[enemy.Name]
-                            -- check if purple
                             local color = purpleMonsters[enemy.Name] and Color3.fromRGB(180, 0, 180) or Color3.fromRGB(255, 100, 100)
                             monsterLabels[i].TextColor3 = color
                             monsterLabels[i].Text = "! " .. enemy.Name .. " (" .. count .. ")"
