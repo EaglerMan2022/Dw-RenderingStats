@@ -1,186 +1,39 @@
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
--- Destroy old UI
-if CoreGui:FindFirstChild("OverlayUI") then
-    CoreGui.OverlayUI:Destroy()
-end
-
--- Create ScreenGui
-local gui = Instance.new("ScreenGui")
-gui.Name = "OverlayUI"
-gui.IgnoreGuiInset = true
-gui.ResetOnSpawn = false
-gui.DisplayOrder = 2147483647
-gui.Parent = CoreGui
-
 -- Main Frame (centered)
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.new(0, 350, 0, 400) -- bigger
-frame.Position = UDim2.new(0.5, -175, 0.5, -200) -- centered
+frame.Size = UDim2.new(0, 350, 0, 400)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.Position = UDim2.new(0.5, 0, 0.5, 0)
 frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 frame.BackgroundTransparency = 0.2
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-frame.ZIndex = 10
 frame.Parent = gui
 
--- Draggable logic
-local dragging, dragInput, dragStart, startPos
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                               startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
+-- 🔹 DRAG BAR (separate, NOT affected by layout)
+local dragBar = Instance.new("Frame")
+dragBar.Size = UDim2.new(1, 0, 0, 30)
+dragBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+dragBar.BorderSizePixel = 0
+dragBar.Parent = frame
 
-frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
+local dragLabel = Instance.new("TextLabel")
+dragLabel.Size = UDim2.new(1, 0, 1, 0)
+dragLabel.BackgroundTransparency = 1
+dragLabel.Text = "DRAG HERE"
+dragLabel.TextColor3 = Color3.new(1,1,1)
+dragLabel.Font = Enum.Font.SourceSansBold
+dragLabel.TextSize = 18
+dragLabel.Parent = dragBar
 
-frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
+-- 🔹 CONTENT FRAME (this is what layout controls)
+local content = Instance.new("Frame")
+content.Size = UDim2.new(1, 0, 1, -30) -- below drag bar
+content.Position = UDim2.new(0, 0, 0, 30)
+content.BackgroundTransparency = 1
+content.Parent = frame
 
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        updateDrag(input)
-    end
-end)
-
--- Layout
+-- Layout goes INSIDE content, not frame
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 5)
-layout.Parent = frame
-
--- Close button
-local close = Instance.new("TextButton")
-close.Text = "CLOSE OVERLAY"
-close.Size = UDim2.new(1, 0, 0, 40)
-close.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-close.TextColor3 = Color3.new(1, 1, 1)
-close.Font = Enum.Font.SourceSansBold
-close.TextSize = 22 -- bigger text
-close.ZIndex = 11
-close.Parent = frame
-
-close.MouseButton1Click:Connect(function()
-    gui:Destroy()
-end)
-
--- Labels
-local floorLabel = Instance.new("TextLabel")
-floorLabel.Size = UDim2.new(1, 0, 0, 50)
-floorLabel.BackgroundTransparency = 1
-floorLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-floorLabel.Font = Enum.Font.SourceSansBold
-floorLabel.TextSize = 28
-floorLabel.Text = "Floor: Init..."
-floorLabel.ZIndex = 11
-floorLabel.Parent = frame
-
-local roomLabel = Instance.new("TextLabel")
-roomLabel.Size = UDim2.new(1, 0, 0, 50)
-roomLabel.BackgroundTransparency = 1
-roomLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-roomLabel.Font = Enum.Font.SourceSansBold
-roomLabel.TextSize = 26
-roomLabel.Text = "Room: Init..."
-roomLabel.ZIndex = 11
-roomLabel.Parent = frame
-
-local monsterLabels = {}
-for i = 1, 10 do -- more slots
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(1, 0, 0, 40)
-    l.BackgroundTransparency = 1
-    l.TextColor3 = Color3.fromRGB(255, 100, 100) -- default red
-    l.Font = Enum.Font.SourceSansItalic
-    l.TextSize = 24 -- bigger
-    l.Text = ""
-    l.ZIndex = 11
-    l.Parent = frame
-    table.insert(monsterLabels, l)
-end
-
--- Purple and Blue monsters
-local purpleMonsters = {
-    BassieMonster=true, AstroMonster=true, PebbleMonster=true,
-    ShellyMonster=true, VeeMonster=true, SproutMonster=true
-}
-local blueMonsters = {
-    GoobMonster=true, ScrapsMonster=true, GigiMonster=true, SquirmMonster=true,
-    BlottMonster=true, CocoaMonster=true, FlutterMonster=true, GlistenMonster=true
-}
-
--- Update logic
-local function update()
-    -- Floor
-    local floorText = "Floor: ???"
-    pcall(function()
-        local sg = playerGui:FindFirstChild("ScreenGui")
-        local menu = sg and sg:FindFirstChild("Menu")
-        local fn = menu and menu:FindFirstChild("FloorNumber")
-        if fn then
-            floorText = "Floor: " .. tostring(fn.Text)
-        end
-    end)
-    floorLabel.Text = floorText
-
-    -- Room & monsters
-    local roomName = "Room: Not Found"
-    for _, ml in pairs(monsterLabels) do ml.Text = "" end
-
-    local currentRoom = workspace:FindFirstChild("CurrentRoom")
-    if currentRoom then
-        local roomModel = currentRoom:FindFirstChildOfClass("Model")
-        if roomModel then
-            roomName = "Room: " .. roomModel.Name
-
-            local monstersFolder = roomModel:FindFirstChild("Monsters")
-            if monstersFolder then
-                local enemies = monstersFolder:GetChildren()
-                if #enemies > 0 then
-                    for i, enemy in ipairs(enemies) do
-                        if monsterLabels[i] then
-                            local color
-                            if purpleMonsters[enemy.Name] then
-                                color = Color3.fromRGB(180, 0, 180)
-                            elseif blueMonsters[enemy.Name] then
-                                color = Color3.fromRGB(0, 150, 255)
-                            else
-                                color = Color3.fromRGB(255, 100, 100)
-                            end
-                            monsterLabels[i].TextColor3 = color
-                            monsterLabels[i].Text = "! " .. enemy.Name
-                        end
-                    end
-                else
-                    monsterLabels[1].Text = "No Monsters"
-                end
-            end
-        end
-    end
-    roomLabel.Text = roomName
-end
-
-RunService.Heartbeat:Connect(function()
-    pcall(update)
-end)
+layout.Parent = content
