@@ -22,9 +22,9 @@ gui.Parent = CoreGui
 -- Main Frame (centered)
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.new(0, 350, 0, 400) -- bigger
-frame.Position = UDim2.new(0.5, -175, 0.5, -200) -- centered
+frame.Size = UDim2.new(0, 350, 0, 400)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.Position = UDim2.new(0.5, 0, 0.5, 0) -- perfectly center
 frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 frame.BackgroundTransparency = 0.2
 frame.BorderSizePixel = 2
@@ -32,13 +32,9 @@ frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 frame.ZIndex = 10
 frame.Parent = gui
 
--- Draggable logic
-local dragging, dragInput, dragStart, startPos
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                               startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
+-- Make draggable from anywhere inside frame
+local dragging = false
+local dragInput, dragStart, startPos
 
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -61,7 +57,13 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
-        updateDrag(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
     end
 end)
 
@@ -77,7 +79,7 @@ close.Size = UDim2.new(1, 0, 0, 40)
 close.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 close.TextColor3 = Color3.new(1, 1, 1)
 close.Font = Enum.Font.SourceSansBold
-close.TextSize = 22 -- bigger text
+close.TextSize = 22
 close.ZIndex = 11
 close.Parent = frame
 
@@ -107,13 +109,13 @@ roomLabel.ZIndex = 11
 roomLabel.Parent = frame
 
 local monsterLabels = {}
-for i = 1, 10 do -- more slots
+for i = 1, 10 do
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(1, 0, 0, 40)
     l.BackgroundTransparency = 1
-    l.TextColor3 = Color3.fromRGB(255, 100, 100) -- default red
+    l.TextColor3 = Color3.fromRGB(255, 100, 100)
     l.Font = Enum.Font.SourceSansItalic
-    l.TextSize = 24 -- bigger
+    l.TextSize = 24
     l.Text = ""
     l.ZIndex = 11
     l.Parent = frame
